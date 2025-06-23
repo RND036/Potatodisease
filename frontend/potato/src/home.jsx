@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useDropzone } from "react-dropzone";
 import axios from 'axios';
 import {
   AppBar,
@@ -252,9 +253,7 @@ export const ImageUpload = () => {
   );
 };
 // DropzoneAreaModern.jsx
-import React from "react";
-import { useDropzone } from "react-dropzone";
-import { Typography, Box } from "@mui/material";
+
 
 const DropzoneAreaModern = ({ onChange }) => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
