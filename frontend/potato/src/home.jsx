@@ -24,7 +24,7 @@ import {
 import ClearIcon from '@mui/icons-material/Clear';
 import { makeStyles } from '@mui/styles';
 import { styled } from '@mui/material/styles';
-import DropzoneAreaModern from './DropzoneAreaModern';
+import DropzoneAreaModern from './DropzoneAreaModern.jsx';
 
 const useStyles = makeStyles(() => ({
   appbar: {
