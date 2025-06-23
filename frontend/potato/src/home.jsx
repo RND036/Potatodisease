@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useDropzone } from "react-dropzone";
 import axios from 'axios';
 import {
   AppBar,
@@ -24,8 +25,8 @@ import {
 import ClearIcon from '@mui/icons-material/Clear';
 import { makeStyles } from '@mui/styles';
 import { styled } from '@mui/material/styles';
-import DropzoneAreaModern from './DropzoneAreaModern';
 
+// Custom styles
 const useStyles = makeStyles(() => ({
   appbar: {
     marginBottom: 24,
@@ -73,6 +74,10 @@ const useStyles = makeStyles(() => ({
   loader: {
     marginRight: 12,
   },
+  buttonGrid: {
+    textAlign: 'center',
+    marginTop: 24,
+  },
 }));
 
 const ColorButton = styled(Button)(({ theme }) => ({
@@ -87,16 +92,47 @@ const ColorButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-const ImageUpload = () => {
+// Dropzone component
+const DropzoneAreaModern = ({ onChange }) => {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: { 'image/*': [] },
+    multiple: false,
+    onDrop: (acceptedFiles) => {
+      onChange(acceptedFiles);
+    },
+  });
+
+  return (
+    <Box
+      {...getRootProps()}
+      sx={{
+        border: "2px dashed #ccc",
+        borderRadius: 2,
+        padding: 4,
+        textAlign: "center",
+        backgroundColor: isDragActive ? "#f0f0f0" : "transparent",
+        cursor: "pointer",
+      }}
+    >
+      <input {...getInputProps()} />
+      <Typography variant="body1" color="textSecondary">
+        Drag and drop an image of a potato plant leaf to process, or click to select a file
+      </Typography>
+    </Box>
+  );
+};
+
+// Main component
+export const ImageUpload = () => {
   const classes = useStyles();
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [data, setData] = useState(null);
   const [image, setImage] = useState(false);
-  const [isLoading, setIsloading] = useState(false);
-  const [confidence, setConfidence] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  let confidence = 0;
 
-  const sendFile = async () => {
+  const sendFile = useCallback(async () => {
     if (image && selectedFile) {
       const formData = new FormData();
       formData.append('file', selectedFile);
@@ -104,24 +140,20 @@ const ImageUpload = () => {
         const res = await axios.post(import.meta.env.VITE_API_URL, formData);
         if (res.status === 200) {
           setData(res.data);
-          if (res.data?.confidence) {
-            setConfidence((parseFloat(res.data.confidence) * 100).toFixed(2));
-          }
         }
       } catch (err) {
         console.error('Upload failed:', err);
       } finally {
-        setIsloading(false);
+        setIsLoading(false);
       }
     }
-  };
+  }, [image, selectedFile]);
 
   const clearData = () => {
     setData(null);
     setImage(false);
     setSelectedFile(null);
     setPreview(null);
-    setConfidence(null);
   };
 
   useEffect(() => {
@@ -135,20 +167,26 @@ const ImageUpload = () => {
   }, [selectedFile]);
 
   useEffect(() => {
-    if (!preview || !image) return;
-    setIsloading(true);
+    if (!preview) return;
+    setIsLoading(true);
     sendFile();
-  }, [preview, image]);
+  }, [preview, sendFile]);
 
   const onSelectFile = (files) => {
     if (!files || files.length === 0) {
-      clearData();
+      setSelectedFile(null);
+      setImage(false);
+      setData(null);
       return;
     }
     setSelectedFile(files[0]);
-    setImage(true);
     setData(null);
+    setImage(true);
   };
+
+  if (data) {
+    confidence = (parseFloat(data.confidence) * 100).toFixed(2);
+  }
 
   return (
     <>
@@ -170,7 +208,7 @@ const ImageUpload = () => {
                     component="img"
                     className={classes.media}
                     image={preview}
-                    title="Uploaded Image"
+                    alt="Preview of uploaded leaf"
                   />
                 </CardActionArea>
               )}
@@ -199,7 +237,7 @@ const ImageUpload = () => {
                       </TableHead>
                       <TableBody>
                         <TableRow>
-                          <TableCell>{data.label}</TableCell> {/* renamed from data.class to data.label */}
+                          <TableCell>{data["class"]}</TableCell>
                           <TableCell align="right">{confidence}%</TableCell>
                         </TableRow>
                       </TableBody>
@@ -228,6 +266,7 @@ const ImageUpload = () => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 marginTop: 24,
+                width: '100%',
               }}
             >
               <ColorButton
