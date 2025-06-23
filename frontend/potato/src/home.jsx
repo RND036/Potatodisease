@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useDropzone } from "react-dropzone";
 import axios from 'axios';
 import {
   AppBar,
@@ -25,6 +24,7 @@ import {
 import ClearIcon from '@mui/icons-material/Clear';
 import { makeStyles } from '@mui/styles';
 import { styled } from '@mui/material/styles';
+import DropzoneAreaModern from './DropzoneAreaModern';
 
 const useStyles = makeStyles(() => ({
   appbar: {
@@ -39,9 +39,7 @@ const useStyles = makeStyles(() => ({
   },
   mainContainer: {
     padding: '2rem',
-    
     minHeight: '100vh',
-    
   },
   cardRoot: {
     padding: 20,
@@ -75,10 +73,6 @@ const useStyles = makeStyles(() => ({
   loader: {
     marginRight: 12,
   },
-  buttonGrid: {
-    textAlign: 'center',
-    marginTop: 24,
-  },
 }));
 
 const ColorButton = styled(Button)(({ theme }) => ({
@@ -93,23 +87,26 @@ const ColorButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-export const ImageUpload = () => {
+const ImageUpload = () => {
   const classes = useStyles();
-  const [selectedFile, setSelectedFile] = useState();
-  const [preview, setPreview] = useState();
-  const [data, setData] = useState();
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [data, setData] = useState(null);
   const [image, setImage] = useState(false);
   const [isLoading, setIsloading] = useState(false);
-  let confidence = 0;
+  const [confidence, setConfidence] = useState(null);
 
   const sendFile = async () => {
-    if (image) {
+    if (image && selectedFile) {
       const formData = new FormData();
       formData.append('file', selectedFile);
       try {
         const res = await axios.post(import.meta.env.VITE_API_URL, formData);
         if (res.status === 200) {
           setData(res.data);
+          if (res.data?.confidence) {
+            setConfidence((parseFloat(res.data.confidence) * 100).toFixed(2));
+          }
         }
       } catch (err) {
         console.error('Upload failed:', err);
@@ -124,6 +121,7 @@ export const ImageUpload = () => {
     setImage(false);
     setSelectedFile(null);
     setPreview(null);
+    setConfidence(null);
   };
 
   useEffect(() => {
@@ -137,26 +135,20 @@ export const ImageUpload = () => {
   }, [selectedFile]);
 
   useEffect(() => {
-    if (!preview) return;
+    if (!preview || !image) return;
     setIsloading(true);
     sendFile();
-  }, [preview]);
+  }, [preview, image]);
 
   const onSelectFile = (files) => {
     if (!files || files.length === 0) {
-      setSelectedFile(undefined);
-      setImage(false);
-      setData(undefined);
+      clearData();
       return;
     }
     setSelectedFile(files[0]);
-    setData(undefined);
     setImage(true);
+    setData(null);
   };
-
-  if (data) {
-    confidence = (parseFloat(data.confidence) * 100).toFixed(2);
-  }
 
   return (
     <>
@@ -207,7 +199,7 @@ export const ImageUpload = () => {
                       </TableHead>
                       <TableBody>
                         <TableRow>
-                          <TableCell>{data.class}</TableCell>
+                          <TableCell>{data.label}</TableCell> {/* renamed from data.class to data.label */}
                           <TableCell align="right">{confidence}%</TableCell>
                         </TableRow>
                       </TableBody>
@@ -226,62 +218,31 @@ export const ImageUpload = () => {
               )}
             </Card>
           </Grid>
-    {data && (
-      <Grid
-        item
-        xs={12}
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginTop: 24,
-          width: '100%',
-        }}
-      >
-        <ColorButton
-          variant="contained"
-          onClick={clearData}
-          startIcon={<ClearIcon />}
-        >
-          Clear & Try Again
-        </ColorButton>
-      </Grid>
+
+          {data && (
+            <Grid
+              item
+              xs={12}
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginTop: 24,
+              }}
+            >
+              <ColorButton
+                variant="contained"
+                onClick={clearData}
+                startIcon={<ClearIcon />}
+              >
+                Clear & Try Again
+              </ColorButton>
+            </Grid>
           )}
         </Grid>
       </Container>
     </>
   );
 };
-// DropzoneAreaModern.jsx
 
-
-const DropzoneAreaModern = ({ onChange }) => {
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: { 'image/*': [] },
-    multiple: false,
-    onDrop: (acceptedFiles) => {
-      onChange(acceptedFiles); // same as DropzoneArea onChange
-    },
-  });
-
-  return (
-    <Box
-      {...getRootProps()}
-      sx={{
-        border: "2px dashed #ccc",
-        borderRadius: 2,
-        padding: 4,
-        textAlign: "center",
-        backgroundColor: isDragActive ? "#f0f0f0" : "transparent",
-        cursor: "pointer",
-      }}
-    >
-      <input {...getInputProps()} />
-      <Typography variant="body1" color="textSecondary">
-        Drag and drop an image of a potato plant leaf to process, or click to select a file
-      </Typography>
-    </Box>
-  );
-};
-
-export default DropzoneAreaModern;
+export default ImageUpload;
